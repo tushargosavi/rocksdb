@@ -9,6 +9,7 @@
 * Creating checkpoint with empty directory now returns `Status::InvalidArgument`; previously, it returned `Status::IOError`.
 * Adds a BlockBasedTableOption to turn off index block compression.
 * Close() method now returns a status when closing a db.
+* RocksDBOptionsParser::Parse()'s `ignore_unknown_options` argument will only be effective if the option file shows it is generated using a higher version of RocksDB than the current version.
 
 ### New Features
 * Improve the performance of iterators doing long range scans by using readahead.
