@@ -9,6 +9,7 @@
 #include "include/org_rocksdb_Env.h"
 #include "include/org_rocksdb_RocksEnv.h"
 #include "include/org_rocksdb_RocksMemEnv.h"
+#include "include/org_rocksdb_RocksHdfsEnv.h"
 #include "rocksdb/env.h"
 
 /*
@@ -74,6 +75,27 @@ jlong Java_org_rocksdb_RocksMemEnv_createMemEnv(
  * Signature: (J)V
  */
 void Java_org_rocksdb_RocksMemEnv_disposeInternal(
+    JNIEnv* env, jobject jobj, jlong jhandle) {
+  auto* e = reinterpret_cast<rocksdb::Env*>(jhandle);
+  assert(e != nullptr);
+  delete e;
+}
+
+jlong Java_org_rocksdb_RocksHdfsEnv_createHdfsEnv(
+    JNIEnv* jenv, jclass jclazz, jstring path) {
+  const char *pathStr = jenv->GetStringUTFChars(path, NULL);
+  rocksdb::Env* env;
+  rocksdb::Status s = rocksdb::NewHdfsEnv(&env, pathStr);
+  jenv->ReleaseStringUTFChars(path, pathStr);
+  if (!s.ok()) {
+    jclass Exception = jenv->FindClass("java/lang/Exception");
+    jenv->ThrowNew(Exception, "Unable to initialize hdfs environment");
+    return reinterpret_cast<jlong>(nullptr);
+  }
+  return reinterpret_cast<jlong>(env);
+}
+
+void Java_org_rocksdb_RocksHdfsEnv_disposeInternal(
     JNIEnv* env, jobject jobj, jlong jhandle) {
   auto* e = reinterpret_cast<rocksdb::Env*>(jhandle);
   assert(e != nullptr);

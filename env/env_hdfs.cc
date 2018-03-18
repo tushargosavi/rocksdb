@@ -7,7 +7,7 @@
 #include "rocksdb/env.h"
 #include "hdfs/env_hdfs.h"
 
-#ifdef USE_HDFS
+#if defined(USE_HDFS) || defined(USE_HDFS3)
 #ifndef ROCKSDB_HDFS_FILE_C
 #define ROCKSDB_HDFS_FILE_C
 
@@ -19,16 +19,41 @@
 #include <sstream>
 #include "rocksdb/status.h"
 #include "util/string_util.h"
+#include "util/logging.h"
+#include "util/stderr_logger.h"
 
 #define HDFS_EXISTS 0
 #define HDFS_DOESNT_EXIST -1
 #define HDFS_SUCCESS 0
+
+#ifdef USE_HDFS3
+/**
+ * Libhdfs does not export a function hdfsPread, this is a work around for that
+ * for now
+ */
+tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer, tSize length) {
+  int ret = hdfsSeek(fs, file, position);
+  if (ret == 0) {
+    return hdfsRead(fs, file, buffer, length);
+  }
+  return -1;
+}
+
+/**
+ * libhdfs3 does not have hdfsHSync, but have similar function with name hdfsSync
+ */
+#define hdfsHSync hdfsSync
+#endif
 
 //
 // This file defines an HDFS environment for rocksdb. It uses the libhdfs
 // api to access HDFS. All HDFS files created by one instance of rocksdb
 // will reside on the same HDFS cluster.
 //
+
+//#define ROCKS_LOG_ERROR(format, va_args...)
+//#define ROCKS_LOG_DEBUG(format, va_args...)
+//#define ROCKS_LOG_FATAL(format, va_args...)
 
 namespace rocksdb {
 
@@ -239,7 +264,7 @@ class HdfsWritableFile: public WritableFile {
     Status s;
     ROCKS_LOG_DEBUG(mylog, "[hdfs] HdfsWritableFile Sync %s\n",
                     filename_.c_str());
-    if (hdfsFlush(fileSys_, hfile_) == -1) {
+    if (hdfsHFlush(fileSys_, hfile_) == -1) {
       return IOError(filename_, errno);
     }
     if (hdfsHSync(fileSys_, hfile_) == -1) {
@@ -269,6 +294,27 @@ class HdfsWritableFile: public WritableFile {
     hfile_ = nullptr;
     return Status::OK();
   }
+};
+
+/**
+ * A logger which does nothing
+ * */
+class NoOpLogger : public Logger {
+  protected:
+    virtual Status CloseImpl() override {
+      return Status::OK();
+    }
+
+  public:
+
+    NoOpLogger() {
+    }
+
+    virtual void Logv(const InfoLogLevel log_level, const char* format, va_list ap) {
+    }
+
+    virtual void Logv(const char* format, va_list ap) {
+    }
 };
 
 // The object that implements the debug logs to reside in HDFS.
@@ -302,6 +348,10 @@ class HdfsLogger : public Logger {
       closed_ = true;
       HdfsCloseHelper();
     }
+  }
+
+  virtual void Logv(const InfoLogLevel log_level, const char* format, va_list ap) {
+    Logv(format, ap);
   }
 
   virtual void Logv(const char* format, va_list ap) {
@@ -475,11 +525,12 @@ Status HdfsEnv::GetChildren(const std::string& path,
     pHdfsFileInfo = hdfsListDirectory(fileSys_, path.c_str(), &numEntries);
     if (numEntries >= 0) {
       for(int i = 0; i < numEntries; i++) {
-        char* pathname = pHdfsFileInfo[i].mName;
-        char* filename = std::rindex(pathname, '/');
-        if (filename != nullptr) {
-          result->push_back(filename+1);
-        }
+        std::string pathname = pHdfsFileInfo[i].mName;
+        ssize_t idx = pathname.rfind('/');
+        if (idx >= 0) {
+          std::string filename = pathname.substr(idx+1, pathname.length());
+          result->push_back(filename);
+        } 
       }
       if (pHdfsFileInfo != nullptr) {
         hdfsFreeFileInfo(pHdfsFileInfo, numEntries);
@@ -555,7 +606,6 @@ Status HdfsEnv::GetFileModificationTime(const std::string& fname,
     return Status::OK();
   }
   return IOError(fname, errno);
-
 }
 
 // The rename is not atomic. HDFS does not allow a renaming if the
@@ -582,16 +632,19 @@ Status HdfsEnv::UnlockFile(FileLock* lock) {
 
 Status HdfsEnv::NewLogger(const std::string& fname,
                           shared_ptr<Logger>* result) {
-  HdfsWritableFile* f = new HdfsWritableFile(fileSys_, fname);
+  /*
+   * HdfsWritableFile* f = new HdfsWritableFile(fileSys_, fname);
   if (f == nullptr || !f->isValid()) {
     delete f;
     *result = nullptr;
     return IOError(fname, errno);
   }
-  HdfsLogger* h = new HdfsLogger(f, &HdfsEnv::gettid);
+  */
+  StderrLogger* h = new StderrLogger();
+  //HdfsLogger* h = new HdfsLogger(f, &HdfsEnv::gettid);
   result->reset(h);
   if (mylog == nullptr) {
-    // mylog = h; // uncomment this for detailed logging
+    mylog = h; // uncomment this for detailed logging
   }
   return Status::OK();
 }

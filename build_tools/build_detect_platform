@@ -461,6 +461,14 @@ fi
 
 # shall we use HDFS?
 
+if test "$USE_HDFS3"; then
+  HDFS_CCFLAGS="$HDFS_CCFLAGS -DUSE_HDFS3"
+  HDFS_LDFLAGS="$HDFS_LDFLAGS -lhdfs3"
+  COMMON_FLAGS="$COMMON_FLAGS $HDFS_CCFLAGS"
+  PLATFORM_LDFLAGS="$PLATFORM_LDFLAGS $HDFS_LDFLAGS"
+  JAVA_LDFLAGS="$JAVA_LDFLAGS $HDFS_LDFLAGS"
+fi
+
 if test "$USE_HDFS"; then
   if test -z "$JAVA_HOME"; then
     echo "JAVA_HOME has to be set for HDFS usage."

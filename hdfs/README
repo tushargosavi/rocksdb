@@ -17,7 +17,9 @@ environment variables appropriately (also defined in setup.sh for convenience)
    make clean all db_bench
 
 To run dbbench,
-  set CLASSPATH to include your hadoop distribution
+  set CLASSPATH to include your hadoop distribution, the following should be enough for most of the cases, when hadoop executable is
+  in the classpath.
+  export CLASSPATH=`hadoop classpath --glob` 
   db_bench --hdfs="hdfs://hbaseudbperf001.snc1.facebook.com:9000"
 
 

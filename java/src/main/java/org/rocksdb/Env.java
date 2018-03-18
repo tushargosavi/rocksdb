@@ -86,6 +86,7 @@ public abstract class Env extends RocksObject {
   static Env default_env_;
 
   private static native long getDefaultEnvInternal();
+  private static native long getHdfsEnvInternal();
   private native void setBackgroundThreads(
       long handle, int num, int priority);
   private native int getThreadPoolQueueLen(long handle, int poolID);

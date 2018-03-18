@@ -13,8 +13,12 @@
 #include "rocksdb/env.h"
 #include "rocksdb/status.h"
 
-#ifdef USE_HDFS
+#if defined(USE_HDFS3) || defined(USE_HDFS)
+#ifdef USE_HDFS3
+#include <hdfs/hdfs.h>
+#elif USE_HDFS
 #include <hdfs.h>
+#endif
 
 namespace rocksdb {
 
