@@ -10,13 +10,14 @@ make jclean static_lib rocksdbjavastatic
 # This part is needed to link library with libhdfs else loading fails and container gets killed.
 # Build a new library at /tmp/, extract and replace jar created
 # publish the jar to local .m2
-./lib.sh
-PWD1=`pwd`
-mkdir /tmp/extracts
-cd /tmp/extracts
-unzip $PWD1/java/target/rocksdbjni-5.10.0-linux64.jar 
-rm librocksdbjni-linux64.so
-cp /tmp/librocksdbjni-linux64.so .
-zip -r /tmp/rocksdbjni-5.10.0-linux64.jar *
-mvn install:install-file -Dfile=/tmp/rocksdbjni-5.10.0-linux64.jar -DgroupId=com.tugo -DartifactId=rocksdb -Dversion=0.0.1-SNAPSHOT  -Dpackaging=jar
+#./lib.sh
+#PWD1=`pwd`
+#mkdir /tmp/extracts
+#cd /tmp/extracts
+#unzip $PWD1/java/target/rocksdbjni-5.10.0-linux64.jar 
+#rm librocksdbjni-linux64.so
+#cp /tmp/librocksdbjni-linux64.so .
+#zip -r /tmp/rocksdbjni-5.10.0-linux64.jar *
+
+mvn install:install-file -Dfile=java/target/rocksdbjni-5.12.0-linux64.jar -DgroupId=com.tugo -DartifactId=rocksdb -Dversion=0.0.1-SNAPSHOT  -Dpackaging=jar
 
